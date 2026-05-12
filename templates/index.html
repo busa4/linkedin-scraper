@@ -19,7 +19,6 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
 
-  /* ── Header ── */
   header {
     background: var(--primary);
     color: #fff;
@@ -32,7 +31,6 @@
   header h1 { font-size: 1.25rem; font-weight: 700; }
   header span { font-size: 0.85rem; opacity: 0.8; margin-left: auto; }
 
-  /* ── Stats bar ── */
   .stats { display: flex; gap: 14px; padding: 20px 28px 0; flex-wrap: wrap; }
   .stat-card {
     background: var(--card);
@@ -45,7 +43,6 @@
   .stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
   .stat-card .label { font-size: 0.75rem; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
 
-  /* ── Filters ── */
   .filters {
     background: var(--card);
     margin: 20px 28px 0;
@@ -57,7 +54,7 @@
     gap: 14px;
     align-items: flex-end;
   }
-  .filter-group { display: flex; flex-direction: column; gap: 4px; }
+  .filter-group { display: flex; flex-direction: column; gap: 4px; position: relative; }
   .filter-group label { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
   .filter-group input,
   .filter-group select {
@@ -75,7 +72,8 @@
   #search { width: 220px; }
   .score-wrap { display: flex; gap: 8px; align-items: center; }
   .score-wrap input[type=number] { width: 60px; }
-  .btn-reset {
+
+  .btn-reset, .btn-columns {
     padding: 7px 16px;
     background: var(--primary-light);
     color: var(--primary);
@@ -86,17 +84,43 @@
     cursor: pointer;
     transition: background .15s;
     align-self: flex-end;
+    white-space: nowrap;
   }
-  .btn-reset:hover { background: #cfe0fc; }
+  .btn-reset:hover, .btn-columns:hover { background: #cfe0fc; }
+  .btn-columns.active { background: var(--primary); color: #fff; }
 
-  /* ── Result count ── */
-  .result-info {
-    padding: 12px 28px 0;
-    font-size: 0.82rem;
-    color: var(--muted);
+  /* Column toggle panel */
+  .col-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    padding: 14px 16px;
+    z-index: 200;
+    min-width: 210px;
+    flex-direction: column;
+    gap: 10px;
   }
+  .col-panel.open { display: flex; }
+  .col-panel-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .col-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    user-select: none;
+  }
+  .col-toggle-row input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; }
+  .col-toggle-row span { color: var(--text); }
+  .col-toggle-row.disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* ── Table ── */
+  .result-info { padding: 12px 28px 0; font-size: 0.82rem; color: var(--muted); }
+
   .table-wrap {
     margin: 10px 28px 28px;
     background: var(--card);
@@ -126,12 +150,39 @@
   tbody tr { border-bottom: 1px solid #eef2f7; transition: background .1s; }
   tbody tr:last-child { border-bottom: none; }
   tbody tr:hover { background: #f7faff; }
+  tbody tr:hover .edit-hint { opacity: 1; }
   td { padding: 10px 14px; vertical-align: middle; }
 
-  /* name cell */
+  /* Editable cells */
+  td[data-editable] { cursor: pointer; position: relative; }
+  td[data-editable]:hover { background: #f0f7ff; }
+  td[data-editable]:hover::after {
+    content: '✎';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-size: 0.65rem;
+    color: var(--primary);
+    opacity: 0.6;
+  }
+  .inline-input {
+    width: 100%;
+    border: 1.5px solid var(--primary);
+    border-radius: 5px;
+    padding: 4px 7px;
+    font-size: inherit;
+    font-family: inherit;
+    background: #fff;
+    color: var(--text);
+    outline: none;
+    resize: vertical;
+  }
+
+  /* Name cell */
   .name-cell a { color: var(--primary); text-decoration: none; font-weight: 600; }
   .name-cell a:hover { text-decoration: underline; }
-  .name-cell .sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .name-cell .sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; cursor: pointer; }
+  .name-cell .sub:hover { color: var(--primary); text-decoration: underline; }
   .field-badge {
     display: inline-block;
     font-size: 0.68rem;
@@ -141,9 +192,20 @@
     background: #e0ecff;
     color: #1a5fa8;
     margin-bottom: 4px;
+    cursor: pointer;
+  }
+  .field-badge:hover { background: #c7d8f5; }
+  .name-link-wrap { display: flex; align-items: center; gap: 6px; }
+  .edit-name-btn {
+    font-size: 0.65rem;
+    color: var(--muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s;
+    flex-shrink: 0;
   }
 
-  /* score */
+  /* Score */
   .score-pill {
     display: inline-flex;
     align-items: center;
@@ -154,24 +216,19 @@
     font-weight: 700;
     font-size: 0.9rem;
     color: #fff;
+    cursor: pointer;
   }
   .score-low    { background: #e74c3c; }
   .score-mid    { background: #e67e22; }
   .score-good   { background: #27ae60; }
   .score-high   { background: #1a8a4a; }
+  .score-none   { background: #bbb; }
 
-  /* needs tags */
+  /* Tags */
   .tags { display: flex; flex-wrap: wrap; gap: 4px; }
-  .tag {
-    font-size: 0.68rem;
-    padding: 2px 8px;
-    border-radius: 20px;
-    background: #eef2ff;
-    color: #3730a3;
-    white-space: nowrap;
-  }
+  .tag { font-size: 0.68rem; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; white-space: nowrap; }
 
-  /* status dropdown */
+  /* Status select */
   .status-select {
     border: 1px solid var(--border);
     border-radius: 20px;
@@ -185,45 +242,27 @@
     min-width: 130px;
   }
   .status-select:focus { border-color: var(--primary); }
-  .status-select.s-new           { background: #f0f4ff; color: #3730a3; border-color: #c7d2fe; }
-  .status-select.s-contacted     { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
-  .status-select.s-interested    { background: #ecfdf5; color: #065f46; border-color: #6ee7b7; }
-  .status-select.s-not-interested{ background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
-  .status-select.s-follow-up     { background: #eff6ff; color: #1e40af; border-color: #93c5fd; }
-  .status-select.s-closed-deal   { background: #f0fdf4; color: #14532d; border-color: #86efac; }
-  .status-select.s-empty         { background: #f9fafb; color: var(--muted); }
+  .status-select.s-new            { background: #f0f4ff; color: #3730a3; border-color: #c7d2fe; }
+  .status-select.s-contacted      { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
+  .status-select.s-interested     { background: #ecfdf5; color: #065f46; border-color: #6ee7b7; }
+  .status-select.s-not-interested { background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
+  .status-select.s-follow-up      { background: #eff6ff; color: #1e40af; border-color: #93c5fd; }
+  .status-select.s-closed-deal      { background: #f0fdf4; color: #14532d; border-color: #86efac; }
+  .status-select.s-manually-declined { background: #fdf2f8; color: #7c3aed; border-color: #d8b4fe; }
+  .status-select.s-empty            { background: #f9fafb; color: var(--muted); }
 
-  /* contact person */
-  .contact-input {
-    border: 1px solid transparent;
-    border-radius: 6px;
-    padding: 4px 8px;
-    font-size: 0.82rem;
-    background: transparent;
-    width: 150px;
-    transition: border-color .15s, background .15s;
-    color: var(--text);
-  }
-  .contact-input:hover { border-color: var(--border); background: #fff; }
-  .contact-input:focus { border-color: var(--primary); background: #fff; outline: none; }
-
-  /* saved flash */
-  .saved-flash { color: #27ae60; font-size: 0.72rem; margin-left: 6px; opacity: 0; transition: opacity .3s; }
+  /* Saved flash */
+  .saved-flash { color: #27ae60; font-size: 0.72rem; margin-left: 4px; opacity: 0; transition: opacity .3s; }
   .saved-flash.show { opacity: 1; }
 
-  /* empty state */
-  .empty { text-align: center; padding: 48px; color: var(--muted); font-size: 0.9rem; }
+  .desc-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 0.78rem; }
+  .muted { color: var(--muted); font-size: 0.8rem; }
 
-  /* description tooltip */
-  .desc-cell {
-    max-width: 240px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--muted);
-    font-size: 0.78rem;
-    cursor: help;
-  }
+  .empty { text-align: center; padding: 48px; color: var(--muted); font-size: 0.9rem; }
+  .placeholder { color: #b0b8cc; font-style: italic; font-size: 0.78rem; }
+  .contact-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+  .contact-link:hover { text-decoration: underline; }
+  .contact-list { display: flex; flex-direction: column; gap: 3px; }
 </style>
 </head>
 <body>
@@ -279,34 +318,74 @@
     </div>
   </div>
   <button class="btn-reset" onclick="resetFilters()">Reset filters</button>
+
+  <!-- Column toggle -->
+  <div class="filter-group" id="col-toggle-wrap">
+    <label>Columns</label>
+    <button class="btn-columns" id="btn-columns" onclick="toggleColPanel(event)">Columns ▾</button>
+    <div class="col-panel" id="col-panel">
+      <div class="col-panel-title">Show / Hide columns</div>
+    </div>
+  </div>
 </div>
 
 <div class="result-info" id="result-info"></div>
 
 <div class="table-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th onclick="sortBy('name')">Company <span class="sort-arrow">↕</span></th>
-        <th onclick="sortBy('score')" class="sorted" id="th-score">Score <span class="sort-arrow">↓</span></th>
-        <th onclick="sortBy('needs')">Potential Needs <span class="sort-arrow">↕</span></th>
-        <th onclick="sortBy('location')">Location <span class="sort-arrow">↕</span></th>
-        <th>Description</th>
-        <th onclick="sortBy('status')">Status <span class="sort-arrow">↕</span></th>
-        <th>Contact Person</th>
-      </tr>
-    </thead>
+  <table id="main-table">
+    <thead id="thead-row"><tr></tr></thead>
     <tbody id="tbody"></tbody>
   </table>
   <div class="empty" id="empty-state" style="display:none">No companies match the current filters.</div>
 </div>
 
 <script>
+const STATUSES = {{ statuses | tojson }};
+
+// ── Column definitions ──────────────────────────────────────────────────
+const COLUMNS = [
+  { key: 'id',             label: '#',                  defaultOn: false,  alwaysOn: false, sortable: true  },
+  { key: 'name',           label: 'Company',            defaultOn: true,   alwaysOn: true,  sortable: true  },
+  { key: 'score',          label: 'Score',              defaultOn: true,   alwaysOn: false, sortable: true  },
+  { key: 'needs',          label: 'Potential Needs',    defaultOn: true,   alwaysOn: false, sortable: true  },
+  { key: 'contact_person', label: 'Contact Person',     defaultOn: true,   alwaysOn: false, sortable: true  },
+  { key: 'status',         label: 'Status',             defaultOn: true,   alwaysOn: false, sortable: true  },
+  { key: 'contact_role',   label: 'Contact Role',       defaultOn: false,  alwaysOn: false, sortable: true  },
+  { key: 'location',       label: 'Location',           defaultOn: false,  alwaysOn: false, sortable: true  },
+  { key: 'description',    label: 'Description',        defaultOn: false,  alwaysOn: false, sortable: false },
+  { key: 'url',            label: 'LinkedIn URL',       defaultOn: false,  alwaysOn: false, sortable: false },
+  { key: 'industry',       label: 'Industry',           defaultOn: false,  alwaysOn: false, sortable: true  },
+  { key: 'field',          label: 'Field',              defaultOn: false,  alwaysOn: false, sortable: true  },
+];
+
+// Bump version when changing defaults to reset stale localStorage
+const LS_KEY = 'tracker_col_vis_v2';
+
+function loadColVisibility() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+    const vis = {};
+    COLUMNS.forEach(c => {
+      vis[c.key] = c.alwaysOn ? true : (c.key in saved ? saved[c.key] : c.defaultOn);
+    });
+    return vis;
+  } catch { return {}; }
+}
+
+function saveColVisibility(vis) {
+  localStorage.setItem(LS_KEY, JSON.stringify(vis));
+}
+
+let colVis = loadColVisibility();
+
+// ── State ───────────────────────────────────────────────────────────────
 let ALL = [];
 let sortKey = 'score';
-let sortDir = -1; // -1 = desc
+let sortDir = -1;
 
+// ── Helpers ─────────────────────────────────────────────────────────────
 function scoreClass(s) {
+  if (!s) return 'score-none';
   if (s >= 9) return 'score-high';
   if (s >= 7) return 'score-good';
   if (s >= 5) return 'score-mid';
@@ -315,89 +394,360 @@ function scoreClass(s) {
 
 function statusClass(s) {
   const map = {
-    'New': 's-new',
-    'Contacted': 's-contacted',
-    'Interested': 's-interested',
-    'Not Interested': 's-not-interested',
-    'Follow Up': 's-follow-up',
-    'Closed Deal': 's-closed-deal',
+    'New': 's-new', 'Contacted': 's-contacted', 'Interested': 's-interested',
+    'Not Interested': 's-not-interested', 'Follow Up': 's-follow-up', 'Closed Deal': 's-closed-deal',
+    'Manually Declined': 's-manually-declined',
   };
   return map[s] || 's-empty';
 }
 
-const STATUSES = {{ statuses | tojson }};
-
 function statusOptions(current) {
-  const opts = ['', ...STATUSES].map(s => {
+  return ['', ...STATUSES].map(s => {
     const sel = s === current ? 'selected' : '';
     return `<option value="${s}" ${sel}>${s || '— set status —'}</option>`;
-  });
-  return opts.join('');
-}
-
-function renderTable(data) {
-  const tbody = document.getElementById('tbody');
-  const empty = document.getElementById('empty-state');
-
-  if (!data.length) {
-    tbody.innerHTML = '';
-    empty.style.display = '';
-    return;
-  }
-  empty.style.display = 'none';
-
-  tbody.innerHTML = data.map(c => {
-    const tags = c.needs
-      ? c.needs.split(',').map(n => `<span class="tag">${n.trim()}</span>`).join('')
-      : '<span style="color:var(--muted);font-size:.75rem">—</span>';
-
-    const sc = statusClass(c.status);
-    const desc = (c.description || '').replace(/"/g, '&quot;').replace(/\n/g, ' ');
-
-    return `<tr>
-      <td class="name-cell">
-        <div><span class="field-badge">${c.field}</span></div>
-        <a href="${c.url}" target="_blank">${c.name}</a>
-        <div class="sub">${c.industry}</div>
-      </td>
-      <td style="text-align:center">
-        <span class="score-pill ${scoreClass(c.score)}">${c.score}</span>
-      </td>
-      <td><div class="tags">${tags}</div></td>
-      <td style="color:var(--muted);font-size:.8rem;white-space:nowrap">${c.location}</td>
-      <td><div class="desc-cell" title="${desc}">${c.description || '—'}</div></td>
-      <td>
-        <select class="status-select ${sc}" data-row="${c.row}"
-          onchange="updateStatus(this)">
-          ${statusOptions(c.status)}
-        </select>
-        <span class="saved-flash" id="flash-${c.row}">✓ Saved</span>
-      </td>
-      <td>
-        <input class="contact-input" data-row="${c.row}"
-          value="${c.contact_person || ''}"
-          placeholder="Add name…"
-          onblur="updateContact(this)"
-          onkeydown="if(event.key==='Enter')this.blur()" />
-      </td>
-    </tr>`;
   }).join('');
 }
 
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Column panel ────────────────────────────────────────────────────────
+function buildColPanel() {
+  const panel = document.getElementById('col-panel');
+  COLUMNS.filter(c => !c.alwaysOn).forEach(c => {
+    const row = document.createElement('label');
+    row.className = 'col-toggle-row';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!colVis[c.key];
+    cb.addEventListener('change', () => {
+      colVis[c.key] = cb.checked;
+      saveColVisibility(colVis);
+      applyColVisibility();
+    });
+    row.appendChild(cb);
+    row.appendChild(Object.assign(document.createElement('span'), { textContent: c.label }));
+    panel.appendChild(row);
+  });
+}
+
+function applyColVisibility() {
+  COLUMNS.forEach(c => {
+    const show = !!colVis[c.key];
+    document.querySelectorAll(`[data-col="${c.key}"]`).forEach(el => {
+      el.style.display = show ? '' : 'none';
+    });
+  });
+}
+
+function toggleColPanel(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('col-panel');
+  const btn = document.getElementById('btn-columns');
+  const open = panel.classList.toggle('open');
+  btn.classList.toggle('active', open);
+}
+
+document.addEventListener('click', e => {
+  const panel = document.getElementById('col-panel');
+  if (!document.getElementById('col-toggle-wrap').contains(e.target)) {
+    panel.classList.remove('open');
+    document.getElementById('btn-columns').classList.remove('active');
+  }
+});
+
+// ── Build thead ─────────────────────────────────────────────────────────
+function buildThead() {
+  const tr = document.querySelector('#thead-row tr');
+  tr.innerHTML = '';
+  COLUMNS.forEach(c => {
+    const th = document.createElement('th');
+    th.dataset.col = c.key;
+    if (c.sortable) {
+      th.onclick = () => sortBy(c.key);
+      th.innerHTML = `${c.label} <span class="sort-arrow">↕</span>`;
+      if (c.key === sortKey) {
+        th.classList.add('sorted');
+        th.querySelector('.sort-arrow').textContent = sortDir === -1 ? '↓' : '↑';
+      }
+    } else {
+      th.textContent = c.label;
+    }
+    tr.appendChild(th);
+  });
+}
+
+// ── Cell renderers ──────────────────────────────────────────────────────
+function cellContent(c, key) {
+  switch (key) {
+    case 'id':
+      return `<span class="muted">${c.id}</span>`;
+
+    case 'name':
+      return `
+        <div class="field-badge" data-row="${c.row}" data-sub="field">${esc(c.field) || '—'}</div>
+        <div class="name-link-wrap">
+          <a href="${esc(c.url)}" target="_blank">${esc(c.name) || '—'}</a>
+          <span class="edit-name-btn" data-row="${c.row}" data-sub="name" title="Edit name">✎</span>
+        </div>
+        <div class="sub" data-row="${c.row}" data-sub="industry">${esc(c.industry) || '—'}</div>`;
+
+    case 'score':
+      return `<span class="score-pill ${scoreClass(c.score)}">${c.score || '—'}</span>`;
+
+    case 'needs': {
+      const tags = (c.needs && c.needs !== 'Not set')
+        ? c.needs.split(',').map(n => `<span class="tag">${esc(n.trim())}</span>`).join('')
+        : '<span class="muted">—</span>';
+      return `<div class="tags">${tags}</div>`;
+    }
+
+    case 'contact_role': {
+      const v = c.contact_role && c.contact_role !== 'Not set' ? c.contact_role : null;
+      return v ? `<span class="muted" style="font-size:.8rem">${esc(v)}</span>`
+               : `<span class="placeholder">—</span>`;
+    }
+
+    case 'location': {
+      const v = c.location && c.location !== 'Not set' ? c.location : null;
+      return v ? `<span class="muted" style="font-size:.8rem;white-space:nowrap">${esc(v)}</span>`
+               : `<span class="placeholder">—</span>`;
+    }
+
+    case 'description': {
+      const raw = c.description && c.description !== 'Not set' ? c.description : null;
+      if (!raw) return `<span class="placeholder">—</span>`;
+      const d = esc(raw);
+      return `<div class="desc-cell" title="${d.replace(/\n/g,' ')}">${d}</div>`;
+    }
+
+    case 'contact_person': {
+      const v = c.contact_person && c.contact_person !== 'Not set' ? c.contact_person : null;
+      if (!v) return `<span class="placeholder">Add name…</span>`;
+      const links = v.split(',').map(entry => {
+        const m = entry.trim().match(/^(.+?):(https?:\/\/.+)$/);
+        return m
+          ? `<a href="${esc(m[2])}" target="_blank" class="contact-link">${esc(m[1])}</a>`
+          : `<span>${esc(entry.trim())}</span>`;
+      });
+      return `<div class="contact-list">${links.join('')}</div>`;
+    }
+
+    case 'status':
+      return `
+        <select class="status-select ${statusClass(c.status)}" data-row="${c.row}">
+          ${statusOptions(c.status)}
+        </select>
+        <span class="saved-flash" id="flash-${c.row}"></span>`;
+
+    case 'url': {
+      const v = c.url && c.url !== 'Not set' ? c.url : null;
+      return v ? `<a href="${esc(v)}" target="_blank" style="color:var(--primary);font-size:.78rem">Open ↗</a>`
+               : `<span class="placeholder">—</span>`;
+    }
+
+    case 'industry': {
+      const v = c.industry && c.industry !== 'Not set' ? c.industry : null;
+      return v ? `<span class="muted" style="font-size:.8rem">${esc(v)}</span>`
+               : `<span class="placeholder">—</span>`;
+    }
+
+    case 'field': {
+      const v = c.field && c.field !== 'Not set' ? c.field : null;
+      return v ? `<span>${esc(v)}</span>` : `<span class="placeholder">—</span>`;
+    }
+
+    default:
+      return esc(c[key]) || '—';
+  }
+}
+
+// Fields that are editable via click on the td
+const EDITABLE_KEYS = new Set(['score','needs','contact_role','location','description','contact_person','url','industry','field']);
+const TEXTAREA_KEYS = new Set(['description']);
+const NUMBER_KEYS   = new Set(['score']);
+const NOT_EDITABLE  = new Set(['id','name','status']);
+
+// ── Render table ────────────────────────────────────────────────────────
+function renderTable(data) {
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty-state');
+  if (!data.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = data.map(c => {
+    return '<tr>' + COLUMNS.map(col => {
+      const editable = EDITABLE_KEYS.has(col.key)
+        ? `data-editable data-row="${c.row}" data-field="${col.key}" data-type="${
+            TEXTAREA_KEYS.has(col.key) ? 'textarea' : NUMBER_KEYS.has(col.key) ? 'number' : 'text'
+          }"`
+        : '';
+      return `<td data-col="${col.key}" ${editable}>${cellContent(c, col.key)}</td>`;
+    }).join('') + '</tr>';
+  }).join('');
+
+  applyColVisibility();
+}
+
+// ── Inline editing ──────────────────────────────────────────────────────
+document.addEventListener('click', e => {
+  // Editable td (regular fields)
+  const td = e.target.closest('td[data-editable]');
+  if (td && !td.querySelector('input,textarea')) {
+    startEdit(td);
+    return;
+  }
+
+  // Field badge or industry sub (inside name cell)
+  const sub = e.target.closest('[data-sub]');
+  if (sub) {
+    startSubEdit(sub);
+    return;
+  }
+
+  // Edit-name pencil button
+  const editBtn = e.target.closest('.edit-name-btn');
+  if (editBtn) {
+    const row = editBtn.dataset.row;
+    const nameTd = editBtn.closest('td');
+    startSubEdit(editBtn, nameTd);
+  }
+});
+
+function startEdit(td) {
+  const row   = +td.dataset.row;
+  const field = td.dataset.field;
+  const type  = td.dataset.type || 'text';
+  const c = ALL.find(x => x.row === row);
+  const currentVal = c ? (c[field] === 'Not set' ? '' : c[field] || '') : '';
+
+  let input;
+  if (type === 'textarea') {
+    input = document.createElement('textarea');
+    input.rows = 4;
+  } else {
+    input = document.createElement('input');
+    input.type = type;
+    if (type === 'number') { input.min = 1; input.max = 10; }
+  }
+  input.className = 'inline-input';
+  input.value = currentVal;
+  td.innerHTML = '';
+  td.appendChild(input);
+  input.focus();
+  if (type !== 'textarea') input.select();
+
+  let done = false;
+  const save = async () => {
+    if (done) return; done = true;
+    const val = input.value.trim();
+    if (c) c[field] = val || null;
+    // re-render the cell content
+    td.innerHTML = cellContent(c, field);
+    await patch(row, { [field]: val || null });
+    flashSaved(row);
+    if (field === 'needs') populateDynamicFilters();
+  };
+  const cancel = () => {
+    if (done) return; done = true;
+    td.innerHTML = cellContent(c, field);
+  };
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && type !== 'textarea') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.removeEventListener('blur', save); cancel(); }
+  });
+}
+
+function startSubEdit(trigger, td) {
+  // sub edits: field badge, industry sub, name link pencil
+  const row   = +trigger.dataset.row;
+  const sub   = trigger.dataset.sub; // 'field' | 'industry' | 'name'
+  const c     = ALL.find(x => x.row === row);
+  const currentVal = c ? (c[sub] === 'Not set' ? '' : c[sub] || '') : '';
+
+  const input = document.createElement('input');
+  input.className = 'inline-input';
+  input.value = currentVal;
+  input.style.display = 'block';
+  input.style.marginBottom = '2px';
+
+  // Replace just the trigger element
+  trigger.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let done = false;
+  const save = async () => {
+    if (done) return; done = true;
+    const val = input.value.trim();
+    if (c) c[sub] = val || null;
+    // Re-render the whole name cell
+    const nameTd = input.closest('td[data-col="name"]');
+    if (nameTd) nameTd.innerHTML = cellContent(c, 'name');
+    await patch(row, { [sub]: val || null });
+    flashSaved(row);
+  };
+  const cancel = () => {
+    if (done) return; done = true;
+    const nameTd = input.closest('td[data-col="name"]');
+    if (nameTd) nameTd.innerHTML = cellContent(c, 'name');
+  };
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.removeEventListener('blur', save); cancel(); }
+  });
+}
+
+async function patch(row, data) {
+  await fetch(`/api/companies/${row}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+function flashSaved(row) {
+  const el = document.getElementById(`flash-${row}`);
+  if (!el) return;
+  el.textContent = '✓ Saved';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+// ── Status select ───────────────────────────────────────────────────────
+document.addEventListener('change', async e => {
+  const sel = e.target.closest('select.status-select');
+  if (!sel) return;
+  const row = +sel.dataset.row;
+  const val = sel.value;
+  sel.className = `status-select ${statusClass(val)}`;
+  const c = ALL.find(x => x.row === row);
+  if (c) c.status = val;
+  await patch(row, { status: val });
+  flashSaved(row);
+  updateStats();
+});
+
+// ── Filters ─────────────────────────────────────────────────────────────
 function applyFilters() {
   const search = document.getElementById('search').value.toLowerCase();
   const fStatus = document.getElementById('f-status').value;
-  const fField = document.getElementById('f-field').value;
-  const fNeeds = document.getElementById('f-needs').value;
+  const fField  = document.getElementById('f-field').value;
+  const fNeeds  = document.getElementById('f-needs').value;
   const fMin = parseInt(document.getElementById('f-score-min').value) || 1;
   const fMax = parseInt(document.getElementById('f-score-max').value) || 10;
 
   let data = ALL.filter(c => {
-    if (search && !`${c.name} ${c.location} ${c.industry} ${c.description}`.toLowerCase().includes(search)) return false;
-    if (fStatus === '__empty__' && c.status) return false;
+    if (search && !`${c.name} ${c.location} ${c.industry} ${c.description} ${c.needs}`.toLowerCase().includes(search)) return false;
+    if (fStatus === '__empty__' && c.status && c.status !== 'Not set') return false;
     if (fStatus && fStatus !== '__empty__' && c.status !== fStatus) return false;
     if (fField && c.field !== fField) return false;
-    if (fNeeds && !c.needs.includes(fNeeds)) return false;
+    if (fNeeds && !(c.needs || '').includes(fNeeds)) return false;
     if (c.score < fMin || c.score > fMax) return false;
     return true;
   });
@@ -414,108 +764,72 @@ function applyFilters() {
 
   document.getElementById('result-info').textContent =
     `Showing ${data.length} of ${ALL.length} companies`;
-
   renderTable(data);
 }
 
 function sortBy(key) {
-  if (sortKey === key) {
-    sortDir *= -1;
-  } else {
-    sortKey = key;
-    sortDir = key === 'score' ? -1 : 1;
-  }
-  // update header arrows
-  document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
-  const thMap = {score:'th-score'};
-  if (thMap[key]) document.getElementById(thMap[key]).classList.add('sorted');
+  sortDir = sortKey === key ? sortDir * -1 : (key === 'score' ? -1 : 1);
+  sortKey = key;
+  buildThead();
   applyFilters();
 }
 
 function resetFilters() {
-  document.getElementById('search').value = '';
-  document.getElementById('f-status').value = '';
-  document.getElementById('f-field').value = '';
-  document.getElementById('f-needs').value = '';
-  document.getElementById('f-score-min').value = '';
-  document.getElementById('f-score-max').value = '';
+  ['search','f-status','f-field','f-needs','f-score-min','f-score-max'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = '';
+  });
   applyFilters();
 }
 
-async function updateStatus(sel) {
-  const row = sel.dataset.row;
-  const value = sel.value;
-  sel.className = `status-select ${statusClass(value)}`;
-  await fetch(`/api/companies/${row}`, {
-    method: 'PATCH',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({status: value})
+// ── Dynamic filter options ───────────────────────────────────────────────
+function populateDynamicFilters() {
+  const fields = [...new Set(ALL.map(c => c.field).filter(f => f && f !== 'Not set'))].sort();
+  const fieldSel = document.getElementById('f-field');
+  const curField = fieldSel.value;
+  fieldSel.innerHTML = '<option value="">All fields</option>';
+  fields.forEach(f => {
+    const o = document.createElement('option');
+    o.value = f; o.textContent = f;
+    if (f === curField) o.selected = true;
+    fieldSel.appendChild(o);
   });
-  // update local data
-  const c = ALL.find(x => x.row == row);
-  if (c) c.status = value;
-  flashSaved(row);
-  updateStats();
-}
 
-async function updateContact(input) {
-  const row = input.dataset.row;
-  const value = input.value.trim();
-  await fetch(`/api/companies/${row}`, {
-    method: 'PATCH',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({contact_person: value})
+  const allNeeds = new Set();
+  ALL.forEach(c => (c.needs || '').split(',').forEach(n => { if (n.trim() && n.trim() !== 'Not set') allNeeds.add(n.trim()); }));
+  const needsSel = document.getElementById('f-needs');
+  const curNeeds = needsSel.value;
+  needsSel.innerHTML = '<option value="">All needs</option>';
+  [...allNeeds].sort().forEach(n => {
+    const o = document.createElement('option');
+    o.value = n; o.textContent = n;
+    if (n === curNeeds) o.selected = true;
+    needsSel.appendChild(o);
   });
-  const c = ALL.find(x => x.row == row);
-  if (c) c.contact_person = value;
-  flashSaved(row);
 }
 
-function flashSaved(row) {
-  const el = document.getElementById(`flash-${row}`);
-  if (!el) return;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 1500);
-}
-
+// ── Stats ────────────────────────────────────────────────────────────────
 function updateStats() {
   document.getElementById('stat-total').textContent = ALL.length;
   const scores = ALL.map(c => c.score).filter(Boolean);
   document.getElementById('stat-avg').textContent =
-    scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : '—';
+    scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '—';
   document.getElementById('stat-high').textContent = ALL.filter(c => c.score >= 8).length;
   document.getElementById('stat-contacted').textContent = ALL.filter(c => c.status === 'Contacted').length;
   document.getElementById('stat-interested').textContent = ALL.filter(c => c.status === 'Interested').length;
   document.getElementById('stat-closed').textContent = ALL.filter(c => c.status === 'Closed Deal').length;
 }
 
-function populateDynamicFilters() {
-  const fields = [...new Set(ALL.map(c => c.field).filter(Boolean))].sort();
-  const fieldSel = document.getElementById('f-field');
-  fields.forEach(f => {
-    const o = document.createElement('option');
-    o.value = f; o.textContent = f;
-    fieldSel.appendChild(o);
-  });
-
-  const allNeeds = new Set();
-  ALL.forEach(c => c.needs.split(',').forEach(n => { if (n.trim()) allNeeds.add(n.trim()); }));
-  const needsSel = document.getElementById('f-needs');
-  [...allNeeds].sort().forEach(n => {
-    const o = document.createElement('option');
-    o.value = n; o.textContent = n;
-    needsSel.appendChild(o);
-  });
-}
-
+// ── Init ─────────────────────────────────────────────────────────────────
 async function init() {
+  buildColPanel();
+  buildThead();
   const res = await fetch('/api/companies');
   ALL = await res.json();
   populateDynamicFilters();
   updateStats();
   applyFilters();
-  document.getElementById('last-updated').textContent =
-    `${ALL.length} companies loaded`;
+  document.getElementById('last-updated').textContent = `${ALL.length} companies loaded`;
 }
 
 init();

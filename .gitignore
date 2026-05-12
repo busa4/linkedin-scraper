@@ -1,4 +1,5 @@
 *.xlsx
+!good_result/*.xlsx
 __pycache__/
 *.pyc
 .env

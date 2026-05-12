@@ -23,6 +23,7 @@ SEARCH_URL = (
 
 OUTPUT_FILE = (
     Path(__file__).parent
+    / "good_result"
     / f"linkedin_companies_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
 )
 

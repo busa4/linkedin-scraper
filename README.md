@@ -52,7 +52,9 @@ good_result/linkedin_companies_YYYYMMDD_HHMMSS.xlsx
 
 ## Dashboard
 
-Web dashboard to view, filter, and manage all analysed companies from `tracker.xlsx`.
+Two-tab web dashboard:
+- **LinkedIn** — manage scraped companies from `tracker.xlsx`
+- **avaandmed.ariregister** — browse the Estonian Business Registry with financials
 
 **Run**
 
@@ -62,19 +64,55 @@ python app.py
 
 Then open **http://localhost:5000** in your browser.
 
-### Features
+---
+
+## Äriregister Dashboard — Data Setup
+
+The registry dashboard requires data files downloaded from the Estonian open data portal.  
+Large files are not stored in this repo — download them manually and place in the project root.
+
+### Download from [avaandmed.ariregister.rik.ee](https://avaandmed.ariregister.rik.ee/et/avaandmed)
+
+| File to download | What it is |
+|---|---|
+| `ettevotja_rekvisiidid__yldandmed.json` | Company general data (name, address, contacts, EMTAK) |
+| `ettevotja_rekvisiidid__kaardile_kantud_isikud.json` | Board members (Juhatuse liikmed) |
+| `1.aruannete_yldandmed_kuni_<date>.csv` | Annual report index — links report IDs to company registry codes |
+| `4.2025_aruannete_elemendid_kuni_<date>.csv` | Financial report elements (revenue, profit, assets, employees) |
+
+> Rename the CSV files to match exactly what `app.py` expects, or update the paths in `app.py` (`CSV_FILE`, `CSV_META_FILE`).
+
+### First run
+
+On the first launch `app.py` automatically streams and indexes all data into a local SQLite cache (`ariregister_cache.db`). This takes **5–15 minutes** depending on your hardware. Subsequent starts are instant.
+
+```
+Loading report metadata…
+Loading financial elements…
+Loading board members…
+Building ariregister cache from JSON (one-time, may take a few minutes)…
+Cache built.
+```
+
+### LinkedIn tab features
 
 | Feature | Details |
 |---|---|
 | Search | Filter by name, location, industry, or description |
 | Status filter | Filter by outreach status |
-| Field filter | Logistics / Retail |
-| Potential Needs filter | Filter by automation need type |
 | Score range | Filter by Automation Interest Score (1–10) |
-| Inline status edit | Change status via dropdown — saves to `tracker.xlsx` instantly |
-| Contact Person | Edit contact name inline — saves on Enter or focus loss |
+| Inline editing | Edit any field inline — saves to `tracker.xlsx` instantly |
 | Sort | Click any column header to sort |
-| Score badges | Color coded: 🔴 1–4 · 🟠 5–6 · 🟢 7–8 · 🟩 9–10 |
+
+### Äriregister tab features
+
+| Feature | Details |
+|---|---|
+| Search | Name, address, activity, email |
+| Filters | Status, legal form, city/region, EMTAK code, revenue, employees, profit |
+| Sort | All columns — server-side, across full dataset |
+| Financials | Revenue, operating profit, assets from latest annual report |
+| Board members | Active Juhatuse liikmed |
 
 ### Status options
 
@@ -86,11 +124,19 @@ Then open **http://localhost:5000** in your browser.
 
 ```
 linkedin-scraper/
-├── linkedin_scraper.py   # Scraper script
-├── app.py                # Flask dashboard backend
-├── tracker.xlsx          # Company data (source for dashboard)
-├── requirements.txt      # Python dependencies
+├── linkedin_scraper.py                          # LinkedIn scraper
+├── app.py                                       # Flask backend
+├── tracker.xlsx                                 # LinkedIn company data
+├── requirements.txt                             # Python dependencies
 ├── templates/
-│   └── index.html        # Dashboard frontend
-└── good_result/          # Scraped Excel exports
+│   ├── index.html                               # LinkedIn dashboard
+│   └── ariregister.html                         # Äriregister dashboard
+├── good_result/                                 # Scraped Excel exports
+│
+│   — not in repo, download manually —
+├── ettevotja_rekvisiidid__yldandmed.json        # ~4 GB
+├── ettevotja_rekvisiidid__kaardile_kantud_isikud.json  # ~1 GB
+├── 1.aruannete_yldandmed_kuni_<date>.csv        # ~200 MB
+├── 4.2025_aruannete_elemendid_kuni_<date>.csv   # ~60 MB
+└── ariregister_cache.db                         # auto-generated on first run
 ```

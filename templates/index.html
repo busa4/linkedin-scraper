@@ -22,14 +22,36 @@
   header {
     background: var(--primary);
     color: #fff;
-    padding: 16px 28px;
+    padding: 0 28px;
     display: flex;
     align-items: center;
     gap: 12px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    min-height: 56px;
   }
-  header h1 { font-size: 1.25rem; font-weight: 700; }
+  header h1 { font-size: 1.25rem; font-weight: 700; flex-shrink: 0; }
   header span { font-size: 0.85rem; opacity: 0.8; margin-left: auto; }
+  .nav-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-left: 24px;
+    height: 56px;
+  }
+  .nav-tab {
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+    transition: color .15s, border-color .15s;
+    white-space: nowrap;
+  }
+  .nav-tab:hover { color: #fff; }
+  .nav-tab.active { color: #fff; border-bottom-color: #fff; }
 
   .stats { display: flex; gap: 14px; padding: 20px 28px 0; flex-wrap: wrap; }
   .stat-card {
@@ -270,6 +292,10 @@
 <header>
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
   <h1>Company Tracker</h1>
+  <nav class="nav-tabs">
+    <a href="/" class="nav-tab active">LinkedIn</a>
+    <a href="/ariregister" class="nav-tab">avaandmed.ariregister</a>
+  </nav>
   <span id="last-updated"></span>
 </header>
 

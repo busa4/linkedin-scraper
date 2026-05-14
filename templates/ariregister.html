@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Äriregister Dashboard</title>
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --primary: #0a66c2;
+    --primary-light: #e8f0fe;
+    --border: #d1dbe8;
+    --text: #1a1a2e;
+    --muted: #6b7a99;
+    --radius: 10px;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --green: #16a34a;
+    --red: #dc2626;
+    --orange: #ea580c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+
+  /* ── Header ── */
+  header {
+    background: var(--primary);
+    color: #fff;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    min-height: 56px;
+  }
+  header h1 { font-size: 1.25rem; font-weight: 700; flex-shrink: 0; }
+  header span.badge { font-size: 0.85rem; opacity: 0.8; margin-left: auto; }
+  .nav-tabs { display: flex; align-items: stretch; gap: 0; margin-left: 24px; height: 56px; }
+  .nav-tab {
+    display: flex; align-items: center; padding: 0 18px;
+    font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.75);
+    text-decoration: none; border-bottom: 3px solid transparent;
+    transition: color .15s, border-color .15s; white-space: nowrap;
+  }
+  .nav-tab:hover { color: #fff; }
+  .nav-tab.active { color: #fff; border-bottom-color: #fff; }
+
+  /* ── Stats ── */
+  .stats { display: flex; gap: 14px; padding: 20px 28px 0; flex-wrap: wrap; }
+  .stat-card {
+    background: var(--card); border-radius: var(--radius);
+    padding: 14px 20px; box-shadow: var(--shadow); min-width: 130px; flex: 1;
+  }
+  .stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+  .stat-card .label { font-size: 0.75rem; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
+
+  /* ── Filters ── */
+  .filters {
+    background: var(--card); margin: 20px 28px 0;
+    border-radius: var(--radius); padding: 16px 20px;
+    box-shadow: var(--shadow); display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end;
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 4px; }
+  .filter-group label { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .filter-group input,
+  .filter-group select {
+    border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px;
+    font-size: 0.85rem; background: #fff; color: var(--text); outline: none; transition: border-color .15s;
+  }
+  .filter-group input:focus, .filter-group select:focus { border-color: var(--primary); }
+  #search { width: 240px; }
+  .btn-reset {
+    padding: 7px 16px; background: var(--primary-light); color: var(--primary);
+    border: 1px solid var(--primary); border-radius: 6px; font-size: 0.82rem;
+    font-weight: 600; cursor: pointer; transition: background .15s; align-self: flex-end; white-space: nowrap;
+  }
+  .btn-reset:hover { background: #cfe0fc; }
+
+  /* ── Pagination info ── */
+  .result-info { padding: 12px 28px 0; font-size: 0.82rem; color: var(--muted); display: flex; gap: 16px; align-items: center; }
+  .result-info button {
+    padding: 4px 12px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--card); font-size: 0.8rem; cursor: pointer; color: var(--text);
+  }
+  .result-info button:hover { border-color: var(--primary); color: var(--primary); }
+  .result-info button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Loading ── */
+  .loading-bar {
+    display: none; height: 3px; background: linear-gradient(90deg, var(--primary) 0%, #60a5fa 50%, var(--primary) 100%);
+    background-size: 200% 100%; animation: shimmer 1.2s infinite linear;
+    margin: 8px 28px 0; border-radius: 2px;
+  }
+  .loading-bar.active { display: block; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  /* ── Table ── */
+  .table-wrap {
+    margin: 10px 28px 28px; background: var(--card);
+    border-radius: var(--radius); box-shadow: var(--shadow); overflow: auto;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  thead th {
+    background: #f7faff; padding: 11px 14px; text-align: left;
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--muted); border-bottom: 1px solid var(--border);
+    white-space: nowrap; cursor: pointer; user-select: none;
+  }
+  thead th:hover { color: var(--primary); }
+  thead th.sorted { color: var(--primary); }
+  thead th .sort-arrow { margin-left: 4px; opacity: 0.5; }
+  thead th.sorted .sort-arrow { opacity: 1; }
+  tbody tr { border-bottom: 1px solid #eef2f7; transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f7faff; }
+  td { padding: 10px 14px; vertical-align: middle; }
+
+  .company-name { font-weight: 600; color: var(--text); }
+  .company-kood { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+  .staatus-pill {
+    display: inline-block; font-size: 0.68rem; font-weight: 700;
+    padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+  }
+  .staatus-R { background: #dcfce7; color: #166534; }
+  .staatus-L { background: #fef2f2; color: #991b1b; }
+  .staatus-N { background: #fefce8; color: #854d0e; }
+  .staatus-other { background: #f1f5f9; color: var(--muted); }
+
+  .vorm-badge {
+    display: inline-block; font-size: 0.68rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 4px; background: #e0ecff; color: #1a5fa8;
+  }
+
+  .contact-col { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; }
+  .contact-col a { color: var(--primary); text-decoration: none; }
+  .contact-col a:hover { text-decoration: underline; }
+
+  .emtak-col { font-size: 0.78rem; color: var(--muted); max-width: 200px; }
+  .emtak-kood { font-weight: 600; color: var(--text); margin-right: 4px; }
+
+  .kapital-col { font-size: 0.82rem; white-space: nowrap; }
+  .kapital-col .currency { font-size: 0.7rem; color: var(--muted); margin-left: 2px; }
+
+  .muted { color: var(--muted); font-size: 0.8rem; }
+  .empty { text-align: center; padding: 48px; color: var(--muted); font-size: 0.9rem; }
+
+  .tootajad-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 28px; height: 28px; border-radius: 50%;
+    font-size: 0.78rem; font-weight: 700; color: #fff;
+  }
+  .tj-0 { background: #94a3b8; }
+  .tj-s { background: #60a5fa; }
+  .tj-m { background: #34d399; }
+  .tj-l { background: #f59e0b; }
+  .tj-xl { background: #ef4444; }
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+  <h1>Äriregister</h1>
+  <nav class="nav-tabs">
+    <a href="/" class="nav-tab">LinkedIn</a>
+    <a href="/ariregister" class="nav-tab active">avaandmed.ariregister</a>
+  </nav>
+  <span class="badge" id="header-count"></span>
+</header>
+
+<div class="stats">
+  <div class="stat-card"><div class="value" id="stat-total">—</div><div class="label">Всего компаний</div></div>
+  <div class="stat-card"><div class="value" id="stat-active">—</div><div class="label">Активных (R)</div></div>
+  <div class="stat-card"><div class="value" id="stat-ou">—</div><div class="label">Osaühing (OÜ)</div></div>
+  <div class="stat-card"><div class="value" id="stat-as">—</div><div class="label">Aktsiaselts (AS)</div></div>
+  <div class="stat-card"><div class="value" id="stat-with-email">—</div><div class="label">С email</div></div>
+  <div class="stat-card"><div class="value" id="stat-with-web">—</div><div class="label">С сайтом</div></div>
+</div>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>Поиск</label>
+    <input type="text" id="search" placeholder="Название, адрес, деятельность…" />
+  </div>
+  <div class="filter-group">
+    <label>Статус</label>
+    <select id="f-staatus">
+      <option value="">Все статусы</option>
+      {% for s in statuses %}
+      <option value="{{ s }}">{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Правовая форма</label>
+    <select id="f-vorm">
+      <option value="">Все формы</option>
+      {% for v in vormed %}
+      <option value="{{ v }}">{{ v }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Город / регион</label>
+    <input type="text" id="f-piirkond" placeholder="напр. Tallinn" style="width:140px" />
+  </div>
+  <div class="filter-group">
+    <label>EMTAK код</label>
+    <input type="text" id="f-emtak" placeholder="напр. 731" style="width:110px" />
+  </div>
+  <div class="filter-group">
+    <label>Выручка (€), от–до</label>
+    <div style="display:flex;gap:6px;align-items:center">
+      <input type="number" id="f-rev-min" placeholder="от" style="width:90px" min="0" />
+      <span style="color:var(--muted)">–</span>
+      <input type="number" id="f-rev-max" placeholder="до" style="width:90px" min="0" />
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Сотрудников, от–до</label>
+    <div style="display:flex;gap:6px;align-items:center">
+      <input type="number" id="f-emp-min" placeholder="от" style="width:70px" min="0" />
+      <span style="color:var(--muted)">–</span>
+      <input type="number" id="f-emp-max" placeholder="до" style="width:70px" min="0" />
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Опер. прибыль (€), от–до</label>
+    <div style="display:flex;gap:6px;align-items:center">
+      <input type="number" id="f-profit-min" placeholder="от" style="width:90px" />
+      <span style="color:var(--muted)">–</span>
+      <input type="number" id="f-profit-max" placeholder="до" style="width:90px" />
+    </div>
+  </div>
+  <button class="btn-reset" onclick="resetFilters()">Сбросить</button>
+</div>
+
+<div class="loading-bar" id="loading-bar"></div>
+
+<div class="result-info" id="result-info">
+  <span id="result-text"></span>
+  <button id="btn-prev" onclick="prevPage()" disabled>← Пред.</button>
+  <span id="page-info"></span>
+  <button id="btn-next" onclick="nextPage()">След. →</button>
+</div>
+
+<div class="table-wrap">
+  <table id="main-table">
+    <thead>
+      <tr>
+        <th data-sort="nimi">Компания <span class="sort-arrow">↕</span></th>
+        <th data-sort="staatus">Статус <span class="sort-arrow">↕</span></th>
+        <th data-sort="vorm">Форма <span class="sort-arrow">↕</span></th>
+        <th data-sort="piirkond">Регион <span class="sort-arrow">↕</span></th>
+        <th>Адрес</th>
+        <th data-sort="kapital">Капитал <span class="sort-arrow">↕</span></th>
+        <th data-sort="reg_kpv">Рег. дата <span class="sort-arrow">↕</span></th>
+        <th>Деятельность (EMTAK)</th>
+        <th>Контакты</th>
+        <th data-sort="tootajad">Сотр. <span class="sort-arrow">↕</span></th>
+      <th data-sort="myygitulu">Выручка (€) <span class="sort-arrow">↕</span></th>
+      <th data-sort="arikasum">Опер. прибыль (€) <span class="sort-arrow">↕</span></th>
+      <th data-sort="varad">Активы (€) <span class="sort-arrow">↕</span></th>
+      <th>Juhatuse liige</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="empty" id="empty-state" style="display:none">Нет компаний по выбранным фильтрам.</div>
+</div>
+
+<script>
+const LIMIT = 200;
+let offset   = 0;
+let total    = 0;
+let sortKey  = 'nimi';
+let sortDir  = 'asc';
+let debounceTimer = null;
+
+// ── Stats counters (from first load, no filters) ─────────────────────────
+let statsLoaded = false;
+
+function staatus_class(s) {
+  if (!s) return 'staatus-other';
+  const first = s.charAt(0).toUpperCase();
+  return ['R','L','N'].includes(first) ? `staatus-${first}` : 'staatus-other';
+}
+
+function tootajad_class(n) {
+  if (n === null || n === undefined) return 'tj-0';
+  if (n === 0) return 'tj-0';
+  if (n <= 9) return 'tj-s';
+  if (n <= 49) return 'tj-m';
+  if (n <= 249) return 'tj-l';
+  return 'tj-xl';
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+const FMT = new Intl.NumberFormat('et-EE', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+
+function formatKapital(k) {
+  if (!k && k !== 0) return '<span class="muted">—</span>';
+  return FMT.format(k);
+}
+
+function fmtEur(v) {
+  if (v === null || v === undefined) return '<span class="muted">—</span>';
+  return `<span style="white-space:nowrap;font-size:.82rem">${FMT.format(v)} €</span>`;
+}
+
+function fmtEurColor(v) {
+  if (v === null || v === undefined) return '<span class="muted">—</span>';
+  const color = v >= 0 ? 'var(--green)' : 'var(--red)';
+  return `<span style="white-space:nowrap;font-size:.82rem;color:${color};font-weight:600">${FMT.format(v)} €</span>`;
+}
+
+function renderRow(c) {
+  // Contacts
+  let contacts = '';
+  if (c.email)     contacts += `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`;
+  if (c.telefon)   contacts += `<span>${esc(c.telefon)}</span>`;
+  if (c.veebileht) contacts += `<a href="${esc(c.veebileht)}" target="_blank">${esc(c.veebileht.replace(/^https?:\/\//,''))}</a>`;
+  if (!contacts)   contacts = '<span class="muted">—</span>';
+
+  // EMTAK
+  let emtak = '<span class="muted">—</span>';
+  if (c.emtak_kood || c.emtak_nimi) {
+    emtak = `<div class="emtak-col"><span class="emtak-kood">${esc(c.emtak_kood)}</span>${esc(c.emtak_nimi)}</div>`;
+  }
+
+  // Kapital
+  const kap = c.kapital
+    ? `<span class="kapital-col">${formatKapital(c.kapital)}<span class="currency">${esc(c.valuuta)}</span></span>`
+    : '<span class="muted">—</span>';
+
+  // Tootajad
+  const tj = (c.tootajad !== null && c.tootajad !== undefined)
+    ? `<span class="tootajad-badge ${tootajad_class(c.tootajad)}">${c.tootajad}</span>`
+    : '<span class="muted">—</span>';
+
+  return `<tr>
+    <td>
+      <div class="company-name">${esc(c.nimi)}</div>
+      <div class="company-kood">#${c.kood}</div>
+    </td>
+    <td><span class="staatus-pill ${staatus_class(c.staatus)}">${esc(c.staatus) || '—'}</span></td>
+    <td><span class="vorm-badge">${esc(c.vorm) || '—'}</span></td>
+    <td><span class="muted" style="font-size:.8rem;white-space:nowrap">${esc(c.piirkond) || '—'}</span></td>
+    <td><span class="muted" style="font-size:.78rem;max-width:220px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(c.aadress)}">${esc(c.aadress) || '—'}</span></td>
+    <td>${kap}</td>
+    <td><span class="muted" style="white-space:nowrap">${esc(c.reg_kpv) || '—'}</span></td>
+    <td>${emtak}</td>
+    <td><div class="contact-col">${contacts}</div></td>
+    <td style="text-align:center">${tj}</td>
+    <td>${fmtEur(c.myygitulu)}</td>
+    <td>${fmtEurColor(c.arikasum)}</td>
+    <td>${fmtEur(c.varad)}</td>
+    <td><span style="font-size:.8rem">${esc(c.juhatuse_liige) || '<span class="muted">—</span>'}</span></td>
+  </tr>`;
+}
+
+async function load() {
+  const loading = document.getElementById('loading-bar');
+  loading.classList.add('active');
+
+  const params = new URLSearchParams({
+    search:   document.getElementById('search').value.trim(),
+    staatus:  document.getElementById('f-staatus').value,
+    vorm:     document.getElementById('f-vorm').value,
+    piirkond: document.getElementById('f-piirkond').value,
+    emtak:    document.getElementById('f-emtak').value.trim(),
+    rev_min:    document.getElementById('f-rev-min').value.trim(),
+    rev_max:    document.getElementById('f-rev-max').value.trim(),
+    emp_min:    document.getElementById('f-emp-min').value.trim(),
+    emp_max:    document.getElementById('f-emp-max').value.trim(),
+    profit_min: document.getElementById('f-profit-min').value.trim(),
+    profit_max: document.getElementById('f-profit-max').value.trim(),
+    limit:    LIMIT,
+    offset:   offset,
+    sort_key: sortKey,
+    sort_dir: sortDir,
+  });
+
+  const res  = await fetch('/api/ariregister?' + params);
+  const data = await res.json();
+  loading.classList.remove('active');
+
+  total = data.total;
+  const rows = data.rows;
+
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty-state');
+
+  if (!rows.length) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = rows.map(renderRow).join('');
+  }
+
+  // result info
+  const from = offset + 1;
+  const to   = Math.min(offset + LIMIT, total);
+  document.getElementById('result-text').textContent =
+    total ? `Показано ${from}–${to} из ${total.toLocaleString('ru')} компаний` : 'Нет результатов';
+  document.getElementById('page-info').textContent =
+    `Стр. ${Math.floor(offset/LIMIT)+1} / ${Math.ceil(total/LIMIT) || 1}`;
+  document.getElementById('btn-prev').disabled = offset === 0;
+  document.getElementById('btn-next').disabled = offset + LIMIT >= total;
+  document.getElementById('header-count').textContent = total ? `${total.toLocaleString('ru')} записей` : '';
+
+  // Load stats once (unfiltered totals)
+  if (!statsLoaded) loadStats();
+}
+
+async function loadStats() {
+  const res  = await fetch('/api/ariregister?limit=0&offset=0');
+  const data = await res.json();
+  statsLoaded = true;
+  const all = data.total;
+  document.getElementById('stat-total').textContent = all.toLocaleString('ru');
+
+  // Fetch per-filter counts in parallel
+  const [rActive, rOU, rAS, rEmail, rWeb] = await Promise.all([
+    fetch('/api/ariregister?staatus=Registrisse+kantud&limit=0').then(r=>r.json()),
+    fetch('/api/ariregister?vorm=Osaühing&limit=0').then(r=>r.json()),
+    fetch('/api/ariregister?vorm=Aktsiaselts&limit=0').then(r=>r.json()),
+    fetch('/api/ariregister?search=@&limit=0').then(r=>r.json()),
+    fetch('/api/ariregister?search=http&limit=0').then(r=>r.json()),
+  ]);
+  document.getElementById('stat-active').textContent    = rActive.total.toLocaleString('ru');
+  document.getElementById('stat-ou').textContent        = rOU.total.toLocaleString('ru');
+  document.getElementById('stat-as').textContent        = rAS.total.toLocaleString('ru');
+  document.getElementById('stat-with-email').textContent= rEmail.total.toLocaleString('ru');
+  document.getElementById('stat-with-web').textContent  = rWeb.total.toLocaleString('ru');
+}
+
+function scheduleLoad() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => { offset = 0; load(); }, 350);
+}
+
+function prevPage() { if (offset >= LIMIT) { offset -= LIMIT; load(); } }
+function nextPage() { if (offset + LIMIT < total) { offset += LIMIT; load(); } }
+
+function resetFilters() {
+  ['search','f-emtak','f-rev-min','f-rev-max','f-emp-min','f-emp-max','f-profit-min','f-profit-max'].forEach(id => document.getElementById(id).value = '');
+  ['f-staatus','f-vorm','f-piirkond'].forEach(id => document.getElementById(id).value = '');
+  offset = 0;
+  load();
+}
+
+document.querySelectorAll('thead th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (sortKey === key) {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortKey = key;
+      sortDir = 'asc';
+    }
+    document.querySelectorAll('thead th').forEach(t => {
+      t.classList.remove('sorted');
+      if (t.querySelector('.sort-arrow')) t.querySelector('.sort-arrow').textContent = '↕';
+    });
+    th.classList.add('sorted');
+    th.querySelector('.sort-arrow').textContent = sortDir === 'asc' ? '↑' : '↓';
+    offset = 0;
+    load();
+  });
+});
+
+// Input listeners
+document.getElementById('search').addEventListener('input', scheduleLoad);
+document.getElementById('f-staatus').addEventListener('change', () => { offset = 0; load(); });
+document.getElementById('f-vorm').addEventListener('change', () => { offset = 0; load(); });
+document.getElementById('f-piirkond').addEventListener('input', scheduleLoad);
+document.getElementById('f-emtak').addEventListener('input', scheduleLoad);
+document.getElementById('f-rev-min').addEventListener('input', scheduleLoad);
+document.getElementById('f-rev-max').addEventListener('input', scheduleLoad);
+document.getElementById('f-emp-min').addEventListener('input', scheduleLoad);
+document.getElementById('f-emp-max').addEventListener('input', scheduleLoad);
+document.getElementById('f-profit-min').addEventListener('input', scheduleLoad);
+document.getElementById('f-profit-max').addEventListener('input', scheduleLoad);
+
+load();
+</script>
+</body>
+</html>

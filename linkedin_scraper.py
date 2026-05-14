@@ -17,8 +17,7 @@ SEARCH_URL = (
     "https://www.linkedin.com/search/results/companies/"
     "?origin=FACETED_SEARCH"
     "&companyHqGeo=%5B%22102974008%22%5D"
-    "&companySize=%5B%22C%22%5D"
-    "&industryCompanyVertical=%5B%22116%22%5D"
+    "&companySize=%5B%22C%22%2C%22D%22%5D"
 )
 
 OUTPUT_FILE = (
